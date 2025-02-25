@@ -106,4 +106,8 @@ public class FileService {
         return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
+    public List<DocumentMetadata> listAllDocuments() {
+        return documentRepository.findAll();
+    }
+
 }

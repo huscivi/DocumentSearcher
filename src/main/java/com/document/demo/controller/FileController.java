@@ -1,12 +1,15 @@
 package com.document.demo.controller;
 
 import com.document.demo.model.AnswerResponse;
+import com.document.demo.model.DocumentMetadata;
 import com.document.demo.model.DocumentResponse;
 import com.document.demo.service.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/documents")
@@ -31,5 +34,11 @@ public class FileController {
     public ResponseEntity<AnswerResponse> askQuestion(@RequestParam String question) {
         AnswerResponse response = fileService.answerQuestion(question);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/list")
+    public ResponseEntity<List<DocumentMetadata>> listAllDocuments() {
+        List<DocumentMetadata> documents = fileService.listAllDocuments();
+        return ResponseEntity.ok(documents);
     }
 }

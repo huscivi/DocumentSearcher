@@ -10,8 +10,6 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
 public class AIService {
 
@@ -35,9 +33,14 @@ public class AIService {
     }
 
     public DocumentResponse summarizeDocument(String content, String title) {
-        String prompt = "Summarize the following document titled '" + title + "' and list key points:\n" + content;
+        var converter = new BeanOutputConverter(DocumentResponse.class);
+        String format = converter.getFormat();
+
+        String prompt = "Summarize the following document titled '" + title + "' and list key points:\n" + content + format;
         ChatResponse response = chatModel.call(new Prompt(prompt));
-        return new DocumentResponse(title, response.getResult().getOutput().getText(), List.of());
+        Generation result = response.getResult();
+
+        return (DocumentResponse) converter.convert(result.getOutput().getText());
     }
 
 }
