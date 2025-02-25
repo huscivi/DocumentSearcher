@@ -29,17 +29,6 @@ public class RedisService {
         }
     }
 
-    public List<Double> getEmbedding(String documentId) {
-        String json = redisTemplate.opsForValue().get("embedding:" + documentId);
-        if (json == null) return null;
-
-        try {
-            return objectMapper.readValue(json, List.class);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read embedding from Redis", e);
-        }
-    }
-
     public Map<String, List<Double>> getAllEmbeddings() {
         Map<String, List<Double>> embeddings = new HashMap<>();
 

@@ -1,5 +1,6 @@
 package com.document.demo.controller;
 
+import com.document.demo.model.AnswerResponse;
 import com.document.demo.model.DocumentResponse;
 import com.document.demo.service.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +28,8 @@ public class FileController {
     }
 
     @GetMapping("/ask")
-    public ResponseEntity<String> askQuestion(@RequestParam String question) {
-        String answer = fileService.answerQuestion(question);
-        return ResponseEntity.ok(answer);
+    public ResponseEntity<AnswerResponse> askQuestion(@RequestParam String question) {
+        AnswerResponse response = fileService.answerQuestion(question);
+        return ResponseEntity.ok(response);
     }
 }
