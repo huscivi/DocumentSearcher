@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -26,26 +28,33 @@ public class FileService {
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
+    @Autowired
+    private EmbeddingService embeddingService;
+
+    @Autowired
+    private RedisService redisService;
+
     private final Tika tika = new Tika();
 
-    public void processFile(MultipartFile file) {
-        try {
-            String content = tika.parseToString(file.getInputStream());
+    /*
+        public void processFile(MultipartFile file) {
+            try {
+                String content = tika.parseToString(file.getInputStream());
 
-            DocumentMetadata metadata = new DocumentMetadata();
-            metadata.setTitle(file.getOriginalFilename());
-            metadata.setType(file.getContentType());
-            metadata.setUploadDate(LocalDate.now());
-            metadata.setUploadedBy("user@example.com");
-            documentRepository.save(metadata);
+                DocumentMetadata metadata = new DocumentMetadata();
+                metadata.setTitle(file.getOriginalFilename());
+                metadata.setType(file.getContentType());
+                metadata.setUploadDate(LocalDate.now());
+                metadata.setUploadedBy("user@example.com");
+                documentRepository.save(metadata);
 
-            redisTemplate.opsForValue().set("document:" + metadata.getId(), content);
+                redisTemplate.opsForValue().set("document:" + metadata.getId(), content);
 
-        } catch (IOException | TikaException e) {
-            throw new RuntimeException("Failed to process file", e);
+            } catch (IOException | TikaException e) {
+                throw new RuntimeException("Failed to process file", e);
+            }
         }
-    }
-
+    */
     public DocumentResponse summarizeDocument(String documentId) {
         String content = redisTemplate.opsForValue().get("document:" + documentId);
         if (content == null) throw new RuntimeException("Document not found in Redis");
@@ -55,11 +64,75 @@ public class FileService {
 
         return aiService.summarizeDocument(content, metadata.get().getTitle());
     }
-
+/*
     public String answerQuestion(String documentId, String question) {
         String content = redisTemplate.opsForValue().get("document:" + documentId);
         if (content == null) throw new RuntimeException("Document not found in Redis");
 
         return aiService.answerQuestion(question, content);
     }
+*/
+
+    public void processFile(MultipartFile file) {
+        try {
+            String content = tika.parseToString(file.getInputStream());
+
+            DocumentMetadata metadata = new DocumentMetadata();
+            metadata.setTitle(file.getOriginalFilename());
+            metadata.setType(file.getContentType());
+            metadata.setUploadDate(LocalDate.now());
+            documentRepository.save(metadata);
+
+            redisTemplate.opsForValue().set("document:" + metadata.getId(), content);
+
+            List<Double> embedding = embeddingService.getEmbedding(content);
+            redisService.saveEmbedding(metadata.getId(), embedding);
+
+        } catch (IOException | TikaException e) {
+            throw new RuntimeException("Failed to process file", e);
+        }
+    }
+
+
+    public String answerQuestion(String question) {
+        Map<String, List<Double>> allEmbeddings = redisService.getAllEmbeddings();
+        if (allEmbeddings.isEmpty()) throw new RuntimeException("No embeddings found");
+
+        List<Double> questionEmbedding = embeddingService.getEmbedding(question);
+
+        String bestDocumentId = null;
+        double bestSimilarity = 0.0;
+
+        for (Map.Entry<String, List<Double>> entry : allEmbeddings.entrySet()) {
+            double similarity = calculateCosineSimilarity(questionEmbedding, entry.getValue());
+            if (similarity > bestSimilarity) {
+                bestSimilarity = similarity;
+                bestDocumentId = entry.getKey();
+            }
+        }
+
+        if (bestSimilarity < 0.6) return "No relevant document found";
+
+        String content = redisTemplate.opsForValue().get("document:" + bestDocumentId);
+        if (content == null) throw new RuntimeException("Document content not found");
+
+        return aiService.answerQuestion(question, content);
+    }
+
+
+    private double calculateCosineSimilarity(List<Double> vectorA, List<Double> vectorB) {
+        double dotProduct = 0.0;
+        double normA = 0.0;
+        double normB = 0.0;
+        for (int i = 0; i < vectorA.size(); i++) {
+            double valA = vectorA.get(i); // Auto-unboxing: Float -> float -> double
+            double valB = vectorB.get(i);
+            dotProduct += valA * valB;
+            normA += valA * valA;
+            normB += valB * valB;
+        }
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
+
 }

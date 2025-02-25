@@ -26,9 +26,9 @@ public class FileController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/ask/{documentId}")
-    public ResponseEntity<String> askQuestion(@PathVariable String documentId, @RequestParam String question) {
-        String answer = fileService.answerQuestion(documentId, question);
+    @GetMapping("/ask")
+    public ResponseEntity<String> askQuestion(@RequestParam String question) {
+        String answer = fileService.answerQuestion(question);
         return ResponseEntity.ok(answer);
     }
 }
